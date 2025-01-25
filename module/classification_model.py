@@ -13,6 +13,14 @@ from sklearn.model_selection import cross_val_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.decomposition import PCA
 
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.metrics import Precision, Recall, AUC
+from tensorflow.keras.callbacks import EarlyStopping
+
+import xgboost as xgb
+from skopt import BayesSearchCV
+
 # ==== REGRESSIONE LOGISTICA =====
 # Analisi dei coefficienti della Regressione Logistica
 def log_reg_coefficients_summary(log_reg_X_train, y_train_smote): 
@@ -257,3 +265,95 @@ def print_pca_features(pca, X_train_standard):
         # Stampo le Features con il rispettivo contributo
         for feature, contribution in feature_contributions:
             print(f"{feature}: {contribution:.4f}")
+
+# ==== ANN - MLP =====
+# Configurazione del modello
+def set_ann(ann_X_train, y_train_smote, optimizer='adam', neurons=128):
+
+    # Definisco il modello
+    model = Sequential([
+        Dense(neurons, activation='relu', input_shape=(ann_X_train.shape[1],)),
+        Dense(1, activation='sigmoid')  # Output layer per classificazione binaria
+    ])
+
+    # Definisco le metriche da monitorare
+    metrics = ['accuracy', Precision(name="precision"), Recall(name="recall"), AUC(name="auc")]
+
+    # Compilo il modello
+    model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=metrics)
+
+    # Callback per l'early stopping
+    early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+
+    # Addestramento del modello
+    history = model.fit(
+        ann_X_train, y_train_smote,
+        validation_split=0.2,
+        epochs=100,  # Numero massimo di epoche
+        batch_size=32,
+        verbose=1,
+        callbacks=[early_stopping]
+    )   
+
+    return model, history
+
+# Calcolo dell'accuracy del modello
+def ann_accuracy(model, X_test, y_test):
+
+    y_proba = model.predict(X_test)
+    y_pred = (y_proba > 0.4).astype(int)
+
+    test_accuracy = accuracy_score(y_test, y_pred)
+
+    print("Test Accuracy:", test_accuracy)
+
+    return y_proba, y_pred, test_accuracy
+
+# ==== ANN -XGBoost =====
+# Configurazione del modello
+def set_xgb(ann_X_train, y_train_smote):
+
+    # Definisco il modello
+    xgb_model = xgb.XGBClassifier(
+    objective='binary:logistic',  # Per classificazione binaria
+    eval_metric='logloss',  # Valutazione del modello basata sulla log loss
+    scale_pos_weight=1,  # Usa questo parametro per gestire un dataset sbilanciato, se necessario
+    use_label_encoder=False  # Evita avvisi di deprecazione
+    )   
+
+    # Addestro il modello
+    xgb_model.fit(ann_X_train, y_train_smote)
+
+    return xgb_model
+
+# Tuning degli iperparameteri di XGBoost
+def tune_xgb_hyperparameters(xgb_model, ann_X_train, y_train_smote):
+
+    # Definisco la griglia di iperparametri per l'ottimizzazione bayesiana
+    param_space = {
+        'max_depth': (3, 10),
+        'learning_rate': (0.01, 0.3, 'uniform'),
+        'n_estimators': (50, 500),
+        'subsample': (0.5, 1.0, 'uniform'),
+        'colsample_bytree': (0.5, 1.0, 'uniform'),
+        'gamma': (0, 5),
+        'reg_alpha': (0, 1),
+        'reg_lambda': (0, 1)
+    }
+    # Configuro l'ottimizzazione bayesiana con cross-validation
+    model_cv = BayesSearchCV(
+        xgb_model,
+        param_space,
+        n_iter=50,  # Numero di iterazioni
+        cv=5,  # Cross-validation a 5 fold
+        n_jobs=-1,  # Utilizzo di tutte le CPU disponibili
+    )
+
+    # Eseguo la ricerca bayesiana
+    model_cv.fit(ann_X_train, y_train_smote)
+
+    # Stampo gli iperparametri ottimali e la loro accuratezza
+    print("Best Parameters:", model_cv.best_params_)
+    print("Best Accuracy:", model_cv.best_score_)
+
+    return model_cv

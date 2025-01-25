@@ -588,12 +588,26 @@ def conf_matrix_coefficients_barplot(model_name, conf_matrix_coefficients_df):
         }
 
         # Barplot
-        sns.barplot(
+        barplot = sns.barplot(
             data = conf_matrix_coefficients_df,
             x = 'Metriche',
             y = 'Valore',
             hue = 'Modello',
             palette = pal
+            )
+        
+        # Annotazioni per i valori sopra le barre
+        for p in barplot.patches:
+            barplot.annotate(
+                format(p.get_height(), '.2f'),  
+                (p.get_x() + p.get_width() / 2., p.get_height()),  
+                ha='center',  
+                va='center',  
+                xytext=(0, 5),  
+                textcoords='offset points',
+                fontsize=9,  
+                color='black',
+                fontweight='bold'  
             )
 
         # Stile
@@ -610,11 +624,25 @@ def conf_matrix_coefficients_barplot2(model_name, conf_matrix_coefficients_df):
         plt.figure(figsize=(6, 4))
 
         # Barplot
-        sns.barplot(
+        barplot = sns.barplot(
             data = conf_matrix_coefficients_df,
             x = 'Metriche',
             y = 'Valore',
             color = 'darkred'
+            )
+        
+        # Annotazioni per i valori sopra le barre
+        for p in barplot.patches:
+            barplot.annotate(
+                format(p.get_height(), '.2f'),  
+                (p.get_x() + p.get_width() / 2., p.get_height()),  
+                ha='center',  
+                va='center',  
+                xytext=(0, 5),  
+                textcoords='offset points',
+                fontsize=9,  
+                color='black',  
+                fontweight='bold'
             )
 
         # Stile
@@ -960,4 +988,74 @@ def plot_pca_variance(pca):
     plt.tight_layout()
 
     plt.savefig("plot/barplot/varianza_spiegata_dalle_componenti_principali.png", bbox_inches='tight')
+    plt.show()
+
+# ==== ARTIFICIAL NEURAL NETWORKS ====
+# Visualizzazione di Loss e Accuracy
+def loss_accuracy_plot(history):
+    plt.figure(figsize=(12, 5))
+
+    # Plot della loss
+    plt.subplot(1, 2, 1)
+    plt.plot(history.history['loss'], label='Training loss', color = 'darkblue')
+    plt.plot(history.history['val_loss'], label='Validation loss', linestyle='--', color = 'darkred')
+    plt.title('Loss')
+    plt.xlabel('Epoche')
+    plt.ylabel('Valore loss')
+    plt.legend()
+
+    # Plot dell'accuracy
+    plt.subplot(1, 2, 2)
+    plt.plot(history.history['accuracy'], label='Training accuracy', color = 'darkblue')
+    plt.plot(history.history['val_accuracy'], label='Validation accuracy', linestyle='--', color = 'darkred')
+    plt.title('Accuracy')
+    plt.xlabel('Epoche')
+    plt.ylabel('Valore accuracy')
+    plt.legend()
+
+    # Titolo generale
+    plt.suptitle("MLP - Loss & Accuracy Evolution per Epoch", fontsize=16)
+
+    plt.tight_layout()
+
+    plt.savefig("plot/lineplot/mlp_loss_&_accuracy_evolution_per_epoch_lineplot.png", bbox_inches='tight')
+    plt.show()
+
+def metrics_evolution_plot(history):
+    
+    # Precision
+    plt.figure(figsize=(12, 5))
+
+    plt.subplot(1, 3, 1)
+    plt.plot(history.history['precision'], label='Train Precision', color = 'darkblue')
+    plt.plot(history.history['val_precision'], label='Val Precision', linestyle='--', color = 'darkred')
+    plt.title('Precision')
+    plt.xlabel('Epoche')
+    plt.ylabel('Valore precision')
+    plt.legend()
+
+    # Recall
+    plt.subplot(1, 3, 2)
+    plt.plot(history.history['recall'], label='Train Recall', color = 'darkblue')
+    plt.plot(history.history['val_recall'], label='Val Recall', linestyle='--', color = 'darkred')
+    plt.title('Recall')
+    plt.xlabel('Epoche')
+    plt.ylabel('Valore recall')
+    plt.legend()
+
+    # AUC
+    plt.subplot(1, 3, 3)
+    plt.plot(history.history['auc'], label='Train AUC', color = 'darkblue')
+    plt.plot(history.history['val_auc'], label='Val AUC', linestyle='--', color = 'darkred')
+    plt.title('AUC')
+    plt.xlabel('Epoche')
+    plt.ylabel('Valore AUC')
+    plt.legend()
+
+    # Titolo generale
+    plt.suptitle("MLP - Metrics Evolution per Epoch", fontsize=16)
+
+    plt.tight_layout()
+
+    plt.savefig("plot/lineplot/mlp_metrics_evolution_per_epoch_lineplot.png", bbox_inches='tight')
     plt.show()
